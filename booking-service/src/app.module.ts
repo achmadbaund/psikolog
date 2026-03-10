@@ -19,10 +19,13 @@ import { HealthModule } from './health/health.module';
         // Check if DATABASE_URL exists (Railway/Render format)
         const databaseUrl = configService.get<string>('DATABASE_URL');
 
+        console.log('=== DATABASE CONFIG ===');
+        console.log('DATABASE_URL present:', !!databaseUrl);
+
         if (databaseUrl) {
           // Parse DATABASE_URL format: postgres://user:pass@host:port/db
           const url = new URL(databaseUrl);
-          return {
+          const config = {
             type: 'postgres',
             host: url.hostname,
             port: parseInt(url.port) || 5432,
@@ -33,10 +36,15 @@ import { HealthModule } from './health/health.module';
             synchronize: true,
             ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
           };
+          console.log('Using DATABASE_URL');
+          console.log('Host:', config.host);
+          console.log('Database:', config.database);
+          console.log('=====================');
+          return config;
         }
 
         // Fallback to individual env vars (Docker/local format)
-        return {
+        const config = {
           type: 'postgres',
           host: configService.get<string>('DB_HOST') || 'postgres',
           port: configService.get<number>('DB_PORT') || 5432,
@@ -47,6 +55,11 @@ import { HealthModule } from './health/health.module';
           synchronize: true,
           ssl: configService.get<string>('NODE_ENV') === 'production' ? { rejectUnauthorized: false } : false,
         };
+        console.log('Using individual env vars');
+        console.log('Host:', config.host);
+        console.log('Database:', config.database);
+        console.log('=====================');
+        return config;
       },
     }),
     BookingModule,
