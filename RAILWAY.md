@@ -55,26 +55,64 @@ PORT=8009
 4. **Builder**: Dockerfile (auto-detect)
 5. Klik **"Deploy"**
 
-**Set Environment Variables:**
+**⚡ CARA MUDAH: Connect PostgreSQL Service**
+
+Setelah deploy selesai:
+1. Buka Booking Service di Railway
+2. Klik tab **"Variables"**
+3. Klik **"New Variable"**
+4. Pilih **"Reference"** (ikon 🔗)
+5. Pilih **PostgreSQL service** dari Langkah 2
+6. Railway akan otomatis buat:
+   - `DATABASE_URL` = `postgres://user:pass@host:port/db` ✅
+   - `PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, `PGDATABASE` ✅
+
+**Atau SET MANUAL (kalau Reference tidak work):**
 ```bash
-# Dari PostgreSQL service (Langkah 2):
+# Buka PostgreSQL service → Variables tab, copy values:
 DB_HOST=<dari PGHOST>
-DB_PORT=<dari PGPORT>
+DB_PORT=5432
 DB_USER=<dari PGUSER>
 DB_PASSWORD=<dari PGPASSWORD>
 DB_NAME=<dari PGDATABASE>
+```
 
-# Dari Faskes service (Langkah 3):
-FASKES_SERVICE_URL=<public URL faskes service>
-
-# Application config:
+**Environment Variables (Manual set):**
+```bash
+FASKES_SERVICE_URL=<public URL faskes service dari Langkah 3>
 NODE_ENV=production
-PORT=8003
 ```
 
 **Health Check:**
 - Path: `/health`
 - Port: `8003`
+
+---
+
+### Langkah 5: Verify Railway Deployment
+
+1. **Cek Logs:**
+   - Buka masing-masing service
+   - Klik tab **"View Logs"**
+   - Pastikan tidak ada error
+
+2. **Test Health Checks:**
+   ```bash
+   # Faskes Service
+   curl https://faskes-service.railway.app/health
+
+   # Booking Service
+   curl https://booking-service.railway.app/health
+   ```
+
+3. **Test API:**
+   ```bash
+   # Test Psychologists API
+   curl https://booking-service.railway.app/psychologists
+
+   # Test Ingestion
+   curl -X POST https://booking-service.railway.app/psychologists/ingest
+   ```
 
 ---
 
@@ -116,16 +154,26 @@ PORT=8003
 
 ### Booking Service Variables:
 
-| Variable | Value | Source |
-|----------|-------|--------|
-| `DB_HOST` | `<dari PGHOST>` | Railway PostgreSQL service |
-| `DB_PORT` | `<dari PGPORT>` | Railway PostgreSQL service |
-| `DB_USER` | `<dari PGUSER>` | Railway PostgreSQL service |
-| `DB_PASSWORD` | `<dari PGPASSWORD>` | Railway PostgreSQL service |
-| `DB_NAME` | `<dari PGDATABASE>` | Railway PostgreSQL service |
-| `FASKES_SERVICE_URL` | `https://faskes-service.railway.app` | Faskes service URL |
-| `NODE_ENV` | `production` | Manual set |
-| `PORT` | `8003` | Railway auto-set |
+| Variable | Value | Source | Required |
+|----------|-------|--------|----------|
+| `DATABASE_URL` | `postgres://user:pass@host:port/db` | Railway PostgreSQL (Auto-fill) | ⭐ **Recommended** |
+| `DB_HOST` | `<dari PostgreSQL service>` | Railway PostgreSQL | Optional |
+| `DB_PORT` | `5432` | Railway PostgreSQL | Optional |
+| `DB_USER` | `<dari PostgreSQL service>` | Railway PostgreSQL | Optional |
+| `DB_PASSWORD` | `<dari PostgreSQL service>` | Railway PostgreSQL | Optional |
+| `DB_NAME` | `psikolog_db` | Manual set | Optional |
+| `FASKES_SERVICE_URL` | `https://faskes-service.railway.app` | Faskes service URL | ✅ Required |
+| `NODE_ENV` | `production` | Manual set | ✅ Required |
+| `PORT` | `8003` | Railway auto-set | ✅ Auto |
+
+**⚡ CARA TERMUDAH:**
+Railway otomatis set `DATABASE_URL` ketika Anda connect PostgreSQL service ke booking service!
+
+**Cara Connect:**
+1. Booking Service → Settings → Variables
+2. Klik "New Variable"
+3. Atau pilih "Reference" dan pilih PostgreSQL service
+4. Railway akan otomatis inject `DATABASE_URL`
 
 ### Faskes Service Variables:
 
