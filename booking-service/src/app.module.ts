@@ -4,6 +4,7 @@ import { ConfigModule } from '@nestjs/config';
 import { HttpModule } from '@nestjs/axios';
 import { BookingModule } from './booking/booking.module';
 import { PsychologistModule } from './psychologist/psychologist.module';
+import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { PsychologistModule } from './psychologist/psychologist.module';
     }),
     BookingModule,
     PsychologistModule,
+    HealthModule,
   ],
   controllers: [],
   providers: [],

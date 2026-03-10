@@ -1,0 +1,54 @@
+services:
+  # PostgreSQL Database
+  - type: postgres
+    name: psikolog-db
+    databaseName: psikolog_db
+    user: postgres
+    plan: free
+    region: singapore
+
+  # Faskes Service
+  - type: web
+    name: psikolog-faskes-service
+    env: docker
+    dockerfilePath: ./faskes-service/Dockerfile
+    plan: free
+    region: singapore
+    envVars:
+      - key: PORT
+        value: 8009
+    healthCheckPath: /health
+
+  # Booking Service
+  - type: web
+    name: psikolog-booking-service
+    env: docker
+    dockerfilePath: ./booking-service/Dockerfile
+    plan: free
+    region: singapore
+    envVars:
+      - key: PORT
+        value: 8003
+      - key: DB_HOST
+        fromDatabase:
+          name: psikolog-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: psikolog-db
+          property: port
+      - key: DB_USER
+        fromDatabase:
+          name: psikolog-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: psikolog-db
+          property: password
+      - key: DB_NAME
+        fromDatabase:
+          name: psikolog-db
+          property: database
+      - key: FASKES_SERVICE_URL
+        value: https://psikolog-faskes-service.onrender.com
+    healthCheckPath: /health
