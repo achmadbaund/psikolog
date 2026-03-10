@@ -101,12 +101,22 @@ cp .env.example .env
 ```
 
 **Required Variables:**
-- `DB_HOST` - PostgreSQL host (default: `postgres` for Docker)
+- `DB_HOST` - PostgreSQL host
+  - Local Docker: `postgres` (Docker service name)
+  - Render.com: Auto-filled (e.g., `dpg-xxx.aws.neon.tech`)
 - `DB_PORT` - PostgreSQL port (default: `5432`)
-- `DB_USER` - PostgreSQL username (default: `postgres`)
-- `DB_PASSWORD` - PostgreSQL password (default: `postgres`)
+- `DB_USER` - PostgreSQL username
+  - Local Docker: `postgres`
+  - Render.com: Auto-filled (e.g., `render_xyz123`)
+- `DB_PASSWORD` - PostgreSQL password
+  - Local Docker: `postgres`
+  - Render.com: Auto-filled
 - `DB_NAME` - Database name (default: `psikolog_db`)
-- `FASKES_SERVICE_URL` - Faskes service URL (default: `http://faskes-service:8009`)
+- `FASKES_SERVICE_URL` - Faskes service URL
+  - Local Docker: `http://faskes-service:8009`
+  - Render.com: `https://psikolog-faskes-service.onrender.com`
+
+📖 **See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed deployment architecture**
 
 **Optional Variables:**
 - `NODE_ENV` - Environment mode (default: `development`)
