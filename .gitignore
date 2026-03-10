@@ -38,7 +38,8 @@ htmlcov/
 # Node
 node_modules/
 npm-debug.log
-package-lock.json
+# package-lock.json - REMOVED from gitignore for production builds
+# Railway/Render need package-lock.json for reproducible builds
 
 # Docker
 *.db
