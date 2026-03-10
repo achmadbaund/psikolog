@@ -25,8 +25,10 @@ import { HealthModule } from './health/health.module';
         if (databaseUrl) {
           // Parse DATABASE_URL format: postgres://user:pass@host:port/db
           const url = new URL(databaseUrl);
+          const sslEnabled = process.env.NODE_ENV === 'production';
+
           const config = {
-            type: 'postgres',
+            type: 'postgres' as const,
             host: url.hostname,
             port: parseInt(url.port) || 5432,
             username: url.username,
@@ -34,18 +36,21 @@ import { HealthModule } from './health/health.module';
             database: url.pathname.substring(1), // Remove leading slash
             entities: [__dirname + '/**/*.entity{.ts,.js}'],
             synchronize: true,
-            ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+            ssl: sslEnabled ? { rejectUnauthorized: false } : false,
           };
           console.log('Using DATABASE_URL');
           console.log('Host:', config.host);
           console.log('Database:', config.database);
+          console.log('SSL:', sslEnabled);
           console.log('=====================');
           return config;
         }
 
         // Fallback to individual env vars (Docker/local format)
+        const sslEnabled = configService.get<string>('NODE_ENV') === 'production';
+
         const config = {
-          type: 'postgres',
+          type: 'postgres' as const,
           host: configService.get<string>('DB_HOST') || 'postgres',
           port: configService.get<number>('DB_PORT') || 5432,
           username: configService.get<string>('DB_USER') || 'postgres',
@@ -53,11 +58,12 @@ import { HealthModule } from './health/health.module';
           database: configService.get<string>('DB_NAME') || 'psikolog_db',
           entities: [__dirname + '/**/*.entity{.ts,.js}'],
           synchronize: true,
-          ssl: configService.get<string>('NODE_ENV') === 'production' ? { rejectUnauthorized: false } : false,
+          ssl: sslEnabled ? { rejectUnauthorized: false } : false,
         };
         console.log('Using individual env vars');
         console.log('Host:', config.host);
         console.log('Database:', config.database);
+        console.log('SSL:', sslEnabled);
         console.log('=====================');
         return config;
       },
