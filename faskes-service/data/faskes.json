@@ -1,0 +1,92 @@
+[
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440001",
+    "nama_faskes": "Klinik Sehat Mental Jakarta",
+    "alamat": "Jl. Sudirman No. 123, Jakarta Pusat",
+    "kontak": "021-12345678",
+    "latitude": -6.2088,
+    "longitude": 106.8456,
+    "jenis_faskes": "KLINIK",
+    "foto_faskes": "https://example.com/faskes/klinik-sehat-mental.jpg",
+    "jam_operasional": {
+      "hari_kerja": "Senin - Sabtu",
+      "jam_buka": "08:00",
+      "jam_tutup": "20:00"
+    },
+    "created_at": "2024-01-15T10:00:00Z",
+    "updated_at": "2024-01-15T10:00:00Z",
+    "synced_at": "2024-03-10T08:00:00Z"
+  },
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440002",
+    "nama_faskes": "RS Jiwa Sehat",
+    "alamat": "Jl. Gatot Subroto No. 45, Jakarta Selatan",
+    "kontak": "021-98765432",
+    "latitude": -6.2250,
+    "longitude": 106.8000,
+    "jenis_faskes": "RUMAH_SAKIT",
+    "foto_faskes": "https://example.com/faskes/rs-jiwa-sehat.jpg",
+    "jam_operasional": {
+      "hari_kerja": "Setiap Hari",
+      "jam_buka": "00:00",
+      "jam_tutup": "23:59"
+    },
+    "created_at": "2024-01-15T10:00:00Z",
+    "updated_at": "2024-01-15T10:00:00Z",
+    "synced_at": "2024-03-10T08:00:00Z"
+  },
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440003",
+    "nama_faskes": "Klinik Psikologi Utama",
+    "alamat": "Jl. Fatmawati No. 10, Jakarta Selatan",
+    "kontak": "021-34567890",
+    "latitude": -6.2400,
+    "longitude": 106.8000,
+    "jenis_faskes": "KLINIK",
+    "foto_faskes": "https://example.com/faskes/psikologi-utama.jpg",
+    "jam_operasional": {
+      "hari_kerja": "Senin - Jumat",
+      "jam_buka": "09:00",
+      "jam_tutup": "17:00"
+    },
+    "created_at": "2024-01-15T10:00:00Z",
+    "updated_at": "2024-01-15T10:00:00Z",
+    "synced_at": "2024-03-10T08:00:00Z"
+  },
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440004",
+    "nama_faskes": "Pusat Layanan Psikologi",
+    "alamat": "Jl. Thamrin No. 5, Jakarta Pusat",
+    "kontak": "021-23456789",
+    "latitude": -6.1900,
+    "longitude": 106.8200,
+    "jenis_faskes": "KLINIK",
+    "foto_faskes": "https://example.com/faskes/pusat-layanan.jpg",
+    "jam_operasional": {
+      "hari_kerja": "Senin - Sabtu",
+      "jam_buka": "08:00",
+      "jam_tutup": "21:00"
+    },
+    "created_at": "2024-01-15T10:00:00Z",
+    "updated_at": "2024-01-15T10:00:00Z",
+    "synced_at": "2024-03-10T08:00:00Z"
+  },
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440005",
+    "nama_faskes": "Klinik Sehat Holistik",
+    "alamat": "Jl. Kemang Raya No. 23, Jakarta Selatan",
+    "kontak": "021-45678901",
+    "latitude": -6.2800,
+    "longitude": 106.8100,
+    "jenis_faskes": "KLINIK",
+    "foto_faskes": "https://example.com/faskes/sehat-holistik.jpg",
+    "jam_operasional": {
+      "hari_kerja": "Senin - Sabtu",
+      "jam_buka": "10:00",
+      "jam_tutup": "22:00"
+    },
+    "created_at": "2024-01-15T10:00:00Z",
+    "updated_at": "2024-01-15T10:00:00Z",
+    "synced_at": "2024-03-10T08:00:00Z"
+  }
+]

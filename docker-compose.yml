@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: psikolog-postgres
+    environment:
+      POSTGRES_DB: psikolog_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - psikolog-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d psikolog_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - psikolog-network
+
+  faskes-service:
+    build:
+      context: ./faskes-service
+      dockerfile: Dockerfile
+    image: psikolog-faskes-service:latest
+    container_name: faskes-service
+    ports:
+      - "8009:8009"
+    volumes:
+      - ./faskes-service/data:/app/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8009/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - psikolog-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  booking-service:
+    build:
+      context: ./booking-service
+      dockerfile: Dockerfile
+    image: psikolog-booking-service:latest
+    container_name: booking-service
+    ports:
+      - "8003:8003"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: psikolog_db
+      FASKES_SERVICE_URL: http://faskes-service:8009
+    depends_on:
+      postgres:
+        condition: service_healthy
+      faskes-service:
+        condition: service_healthy
+    networks:
+      - psikolog-network
+
+volumes:
+  psikolog-postgres-data:
+
+networks:
+  psikolog-network:
+    driver: bridge

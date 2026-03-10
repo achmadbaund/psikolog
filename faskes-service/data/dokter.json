@@ -1,0 +1,164 @@
+[
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440101",
+    "faskes_id": "550e8400-e29b-41d4-a716-446655440001",
+    "nama_dokter": "Dr. Sarah Wijaya, Sp.Ps",
+    "spesialisasi": "Psikologi Klinis",
+    "jadwal_praktik": [
+      {
+        "hari": "SENIN",
+        "jam_mulai": "09:00",
+        "jam_selesai": "12:00",
+        "kuota": 5
+      },
+      {
+        "hari": "SENIN",
+        "jam_mulai": "14:00",
+        "jam_selesai": "17:00",
+        "kuota": 5
+      },
+      {
+        "hari": "RABU",
+        "jam_mulai": "09:00",
+        "jam_selesai": "12:00",
+        "kuota": 5
+      },
+      {
+        "hari": "RABU",
+        "jam_mulai": "14:00",
+        "jam_selesai": "17:00",
+        "kuota": 5
+      },
+      {
+        "hari": "JUMAT",
+        "jam_mulai": "09:00",
+        "jam_selesai": "13:00",
+        "kuota": 5
+      }
+    ],
+    "kontak": "0812-3456-7890",
+    "foto_dokter": "https://example.com/dokter/sarah-wijaya.jpg",
+    "created_at": "2024-01-15T10:00:00Z",
+    "updated_at": "2024-01-15T10:00:00Z"
+  },
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440102",
+    "faskes_id": "550e8400-e29b-41d4-a716-446655440001",
+    "nama_dokter": "Dr. Budi Santoso, Sp.Ps",
+    "spesialisasi": "Psikologi Anak",
+    "jadwal_praktik": [
+      {
+        "hari": "SELASA",
+        "jam_mulai": "09:00",
+        "jam_selesai": "12:00",
+        "kuota": 4
+      },
+      {
+        "hari": "SELASA",
+        "jam_mulai": "14:00",
+        "jam_selesai": "17:00",
+        "kuota": 4
+      },
+      {
+        "hari": "KAMIS",
+        "jam_mulai": "09:00",
+        "jam_selesai": "12:00",
+        "kuota": 4
+      },
+      {
+        "hari": "KAMIS",
+        "jam_mulai": "14:00",
+        "jam_selesai": "17:00",
+        "kuota": 4
+      }
+    ],
+    "kontak": "0812-9876-5432",
+    "foto_dokter": "https://example.com/dokter/budi-santoso.jpg",
+    "created_at": "2024-01-15T10:00:00Z",
+    "updated_at": "2024-01-15T10:00:00Z"
+  },
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440103",
+    "faskes_id": "550e8400-e29b-41d4-a716-446655440002",
+    "nama_dokter": "Dr. Anita Kusuma, Sp.Ps",
+    "spesialisasi": "Psikologi Pernikahan",
+    "jadwal_praktik": [
+      {
+        "hari": "SENIN",
+        "jam_mulai": "10:00",
+        "jam_selesai": "15:00",
+        "kuota": 6
+      },
+      {
+        "hari": "RABU",
+        "jam_mulai": "10:00",
+        "jam_selesai": "15:00",
+        "kuota": 6
+      },
+      {
+        "hari": "JUMAT",
+        "jam_mulai": "10:00",
+        "jam_selesai": "15:00",
+        "kuota": 6
+      }
+    ],
+    "kontak": "0812-1111-2222",
+    "foto_dokter": "https://example.com/dokter/anita-kusuma.jpg",
+    "created_at": "2024-01-15T10:00:00Z",
+    "updated_at": "2024-01-15T10:00:00Z"
+  },
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440104",
+    "faskes_id": "550e8400-e29b-41d4-a716-446655440003",
+    "nama_dokter": "Dr. Hendra Gunawan, Sp.Ps",
+    "spesialisasi": "Psikologi Organisasi",
+    "jadwal_praktik": [
+      {
+        "hari": "SELASA",
+        "jam_mulai": "08:00",
+        "jam_selesai": "12:00",
+        "kuota": 3
+      },
+      {
+        "hari": "KAMIS",
+        "jam_mulai": "08:00",
+        "jam_selesai": "12:00",
+        "kuota": 3
+      }
+    ],
+    "kontak": "0812-3333-4444",
+    "foto_dokter": "https://example.com/dokter/hendra-gunawan.jpg",
+    "created_at": "2024-01-15T10:00:00Z",
+    "updated_at": "2024-01-15T10:00:00Z"
+  },
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440105",
+    "faskes_id": "550e8400-e29b-41d4-a716-446655440004",
+    "nama_dokter": "Dr. Linda Permata, Sp.Ps",
+    "spesialisasi": "Psikologi Pendidikan",
+    "jadwal_praktik": [
+      {
+        "hari": "SENIN",
+        "jam_mulai": "13:00",
+        "jam_selesai": "17:00",
+        "kuota": 5
+      },
+      {
+        "hari": "RABU",
+        "jam_mulai": "13:00",
+        "jam_selesai": "17:00",
+        "kuota": 5
+      },
+      {
+        "hari": "JUMAT",
+        "jam_mulai": "13:00",
+        "jam_selesai": "17:00",
+        "kuota": 5
+      }
+    ],
+    "kontak": "0812-5555-6666",
+    "foto_dokter": "https://example.com/dokter/linda-permata.jpg",
+    "created_at": "2024-01-15T10:00:00Z",
+    "updated_at": "2024-01-15T10:00:00Z"
+  }
+]
