@@ -1,8 +1,10 @@
 import json
 import os
 import math
+import uuid
 from datetime import datetime
 from flask import Flask, jsonify, request
+from kafka_producer import get_booking_producer
 
 app = Flask(__name__)
 
@@ -300,6 +302,133 @@ def get_jadwal_dokter(dokter_id):
             'jadwal': dokter_data['jadwal_praktik']
         }
     })
+
+
+@app.route('/booking', methods=['POST'])
+def create_booking():
+    """Receive booking request and publish to Kafka (Producer)"""
+    try:
+        data = request.get_json()
+
+        if not data:
+            return jsonify({
+                'error': {
+                    'code': 'INVALID_REQUEST',
+                    'message': 'Request body is required'
+                }
+            }), 400
+
+        # Validate required fields
+        required_fields = ['faskes_id', 'dokter_id', 'pasien_id', 'jadwal']
+        missing_fields = [field for field in required_fields if field not in data]
+
+        if missing_fields:
+            return jsonify({
+                'error': {
+                    'code': 'MISSING_FIELDS',
+                    'message': 'Missing required fields',
+                    'fields': missing_fields
+                }
+            }), 400
+
+        # Validate jadwal format
+        try:
+            jadwal_datetime = datetime.fromisoformat(data['jadwal'].replace('Z', '+00:00'))
+        except ValueError:
+            return jsonify({
+                'error': {
+                    'code': 'INVALID_DATE',
+                    'message': 'Invalid jadwal format. Use ISO 8601 format (e.g., 2026-03-15T10:00:00Z)'
+                }
+            }), 400
+
+        # Check if faskes exists
+        faskes = load_json_file('faskes.json')
+        faskes_data = next((f for f in faskes if f['id'] == data['faskes_id']), None)
+
+        if not faskes_data:
+            return jsonify({
+                'error': {
+                    'code': 'FAKES_NOT_FOUND',
+                    'message': f'Faskes with id {data["faskes_id"]} not found'
+                }
+            }), 404
+
+        # Check if dokter exists
+        dokters = load_json_file('dokter.json')
+        dokter_data = next((d for d in dokters if d['id'] == data['dokter_id']), None)
+
+        if not dokter_data:
+            return jsonify({
+                'error': {
+                    'code': 'DOKTER_NOT_FOUND',
+                    'message': f'Dokter with id {data["dokter_id"]} not found'
+                }
+            }), 404
+
+        # Check if dokter belongs to faskes
+        if dokter_data['faskes_id'] != data['faskes_id']:
+            return jsonify({
+                'error': {
+                    'code': 'DOKTER_NOT_IN_FASKES',
+                    'message': 'Dokter tidak berada di faskes tersebut'
+                }
+            }), 400
+
+        # Generate booking ID
+        booking_id = str(uuid.uuid4())
+
+        # Prepare booking event
+        booking_event = {
+            'id': booking_id,
+            'faskes_id': data['faskes_id'],
+            'faskes_name': faskes_data['nama_faskes'],
+            'dokter_id': data['dokter_id'],
+            'dokter_name': dokter_data['nama_dokter'],
+            'spesialisasi': dokter_data['spesialisasi'],
+            'pasien_id': data['pasien_id'],
+            'jadwal': data['jadwal'],
+            'session_type': data.get('session_type', 'VIDEO'),
+            'notes': data.get('notes', ''),
+            'status': 'PENDING',
+            'created_at': datetime.utcnow().isoformat(),
+            'source': 'faskes-service'
+        }
+
+        # Publish to Kafka
+        producer = get_booking_producer()
+        result = producer.publish_booking(booking_event)
+
+        if not result.get('success'):
+            return jsonify({
+                'error': {
+                    'code': 'KAFKA_ERROR',
+                    'message': 'Failed to queue booking',
+                    'details': result.get('error')
+                }
+            }), 500
+
+        # Return success response (accepted for processing)
+        return jsonify({
+            'status': 'success',
+            'message': 'Booking request received and queued for processing',
+            'data': {
+                'booking_id': booking_id,
+                'faskes_name': faskes_data['nama_faskes'],
+                'dokter_name': dokter_data['nama_dokter'],
+                'jadwal': data['jadwal'],
+                'status': 'PENDING',
+                'estimated_processing_time': '1-2 minutes'
+            }
+        }), 202  # 202 Accepted
+
+    except Exception as e:
+        return jsonify({
+            'error': {
+                'code': 'INTERNAL_ERROR',
+                'message': str(e)
+            }
+        }), 500
 
 
 @app.errorhandler(404)

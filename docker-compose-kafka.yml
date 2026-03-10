@@ -1,0 +1,153 @@
+version: '3.8'
+
+services:
+  # ============================================
+  # KAFKA INFRASTRUCTURE
+  # ============================================
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: psikolog-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    networks:
+      - psikolog-network
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "2181"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: psikolog-kafka
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+    networks:
+      - psikolog-network
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+  # Kafka UI (Optional - for management)
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: psikolog-kafka-ui
+    depends_on:
+      - kafka
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: psikolog-cluster
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+    networks:
+      - psikolog-network
+
+  # ============================================
+  # POSTGRESQL DATABASE
+  # ============================================
+  postgres:
+    image: postgres:15-alpine
+    container_name: psikolog-postgres
+    environment:
+      POSTGRES_DB: psikolog_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - psikolog-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d psikolog_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - psikolog-network
+
+  # ============================================
+  # FASKES SERVICE (Producer)
+  # ============================================
+  faskes-service:
+    build:
+      context: ./faskes-service
+      dockerfile: Dockerfile
+    image: psikolog-faskes-service:latest
+    container_name: faskes-service
+    ports:
+      - "8009:8009"
+    volumes:
+      - ./faskes-service/data:/app/data
+    environment:
+      PORT: 8009
+      KAFKA_BROKERS: kafka:29092
+      KAFKA_TOPIC: booking-events
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8009/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - psikolog-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+
+  # ============================================
+  # BOOKING SERVICE (Consumer)
+  # ============================================
+  booking-service:
+    build:
+      context: ./booking-service
+      dockerfile: Dockerfile
+    image: psikolog-booking-service:latest
+    container_name: booking-service
+    ports:
+      - "8003:8003"
+    environment:
+      PORT: 8003
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: psikolog_db
+      FASKES_SERVICE_URL: http://faskes-service:8009
+      KAFKA_BROKERS: kafka:29092
+      KAFKA_GROUP_ID: booking-processor
+      KAFKA_TOPIC: booking-events
+      NODE_ENV: development
+    depends_on:
+      postgres:
+        condition: service_healthy
+      faskes-service:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - psikolog-network
+
+volumes:
+  psikolog-postgres-data:
+
+networks:
+  psikolog-network:
+    driver: bridge
