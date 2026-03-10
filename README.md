@@ -94,37 +94,60 @@ Dokter/Layanan/Jadwal    Psychologist Consultation     Bookings & Video Sessions
 
 ### Environment Variables
 
-Copy `.env.example` to `.env` and configure:
+#### **Option 1: Local Docker Development** 🏠
+
+Untuk development lokal dengan Docker Compose:
 
 ```bash
-cp .env.example .env
+cp .env.docker .env
+docker compose up -d --build
 ```
 
-**Required Variables:**
-- `DB_HOST` - PostgreSQL host
-  - Local Docker: `postgres` (Docker service name)
-  - Render.com: Auto-filled (e.g., `dpg-xxx.aws.neon.tech`)
-- `DB_PORT` - PostgreSQL port (default: `5432`)
-- `DB_USER` - PostgreSQL username
-  - Local Docker: `postgres`
-  - Render.com: Auto-filled (e.g., `render_xyz123`)
-- `DB_PASSWORD` - PostgreSQL password
-  - Local Docker: `postgres`
-  - Render.com: Auto-filled
-- `DB_NAME` - Database name (default: `psikolog_db`)
-- `FASKES_SERVICE_URL` - Faskes service URL
-  - Local Docker: `http://faskes-service:8009`
-  - Render.com: `https://psikolog-faskes-service.onrender.com`
+**Database config di .env:** ✅ **REQUIRED**
+```bash
+DB_HOST=postgres          # Docker service name
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=postgres
+DB_NAME=psikolog_db
+FASKES_SERVICE_URL=http://faskes-service:8009
+```
+
+---
+
+#### **Option 2: Render.com Production** 🚀
+
+Untuk deploy ke Render.com:
+
+**TIDAK PERLU buat .env file!** ❌
+
+Render akan **auto-fill** database config dari `render.yaml`:
+
+```yaml
+# Di render.yaml - auto-fill dari PostgreSQL service
+envVars:
+  - key: DB_HOST
+    fromDatabase:
+      name: psikolog-db
+      property: host  # ← Auto-filled!
+```
+
+Yang perlu **MANUAL** di-set di Render:
+```bash
+FASKES_SERVICE_URL=https://psikolog-faskes-service.onrender.com
+NODE_ENV=production
+PORT=8003
+```
 
 📖 **See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed deployment architecture**
 
-**Optional Variables:**
-- `NODE_ENV` - Environment mode (default: `development`)
-- `PORT` - Booking service port (default: `8003`)
-- `BPJS_API_KEY` - BPJS API key for production
-- `ALLO_BANK_API_KEY` - Allo Bank API key for production
+---
+
+**Optional Variables (Production):**
+- `BPJS_API_KEY` - BPJS API key
+- `ALLO_BANK_API_KEY` - Allo Bank API key
 - `JWT_SECRET` - JWT secret for authentication
-- `CORS_ORIGIN` - CORS allowed origins (default: `*`)
+- `CORS_ORIGIN` - CORS allowed origins
 
 ### Start All Services
 
