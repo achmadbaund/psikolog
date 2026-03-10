@@ -28,8 +28,9 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
 
-  await app.listen(8003);
-  console.log('Booking Service is running on http://localhost:8003');
-  console.log('Swagger documentation: http://localhost:8003/api');
+  const port = process.env.PORT || 8003;
+  await app.listen(port);
+  console.log(`Booking Service is running on port ${port}`);
+  console.log(`Swagger documentation: http://localhost:${port}/api`);
 }
 bootstrap();

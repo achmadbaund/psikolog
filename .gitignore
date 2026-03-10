@@ -10,8 +10,6 @@ build/
 
 # Environment
 .env
-.env.docker
-.env.render
 .venv
 venv/
 ENV/

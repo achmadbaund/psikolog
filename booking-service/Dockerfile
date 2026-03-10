@@ -4,7 +4,7 @@ WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
-RUN npm install --production=false
+RUN npm ci --production=false
 
 # Copy source code
 COPY . .
@@ -12,8 +12,8 @@ COPY . .
 # Build TypeScript
 RUN npm run build
 
-# Expose port
+# Expose port (Railway will set PORT env var)
 EXPOSE 8003
 
-# Start application
-CMD ["npm", "run", "start:dev"]
+# Start application (production mode)
+CMD ["npm", "run", "start"]

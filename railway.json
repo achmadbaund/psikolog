@@ -1,10 +1,13 @@
 {
   "$schema": "https://railway.app/railway.schema.json",
   "build": {
-    "builder": "NIXPACKS"
+    "builder": "NIXPACKS",
+    "buildCommand": "cd booking-service && npm install && npm run build",
+    "watchPatterns": ["booking-service/**"]
   },
   "deploy": {
-    "startCommand": "docker compose up --build",
+    "startCommand": "cd booking-service && npm run start",
+    "healthcheckPath": "/health",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10
   }
