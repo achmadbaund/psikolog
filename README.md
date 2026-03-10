@@ -92,6 +92,30 @@ Dokter/Layanan/Jadwal    Psychologist Consultation     Bookings & Video Sessions
 - Python 3.10+ (for local Flask development)
 - Docker Compose v2+
 
+### Environment Variables
+
+Copy `.env.example` to `.env` and configure:
+
+```bash
+cp .env.example .env
+```
+
+**Required Variables:**
+- `DB_HOST` - PostgreSQL host (default: `postgres` for Docker)
+- `DB_PORT` - PostgreSQL port (default: `5432`)
+- `DB_USER` - PostgreSQL username (default: `postgres`)
+- `DB_PASSWORD` - PostgreSQL password (default: `postgres`)
+- `DB_NAME` - Database name (default: `psikolog_db`)
+- `FASKES_SERVICE_URL` - Faskes service URL (default: `http://faskes-service:8009`)
+
+**Optional Variables:**
+- `NODE_ENV` - Environment mode (default: `development`)
+- `PORT` - Booking service port (default: `8003`)
+- `BPJS_API_KEY` - BPJS API key for production
+- `ALLO_BANK_API_KEY` - Allo Bank API key for production
+- `JWT_SECRET` - JWT secret for authentication
+- `CORS_ORIGIN` - CORS allowed origins (default: `*`)
+
 ### Start All Services
 
 ```bash
@@ -681,6 +705,57 @@ This project demonstrates:
 
 ## 🚀 Deployment
 
+### Render.com (Recommended)
+
+**Automatic Deployment with Blueprint:**
+
+1. Push code to GitHub
+2. Sign up at https://render.com
+3. Click **"New +"** → **"Blueprint"**
+4. Select repository `achmadbaund/psikolog`
+5. Render will auto-detect `render.yaml`
+6. Click **"Apply Blueprint"**
+
+**Services Deployed:**
+- PostgreSQL Database (managed)
+- Faskes Service (Flask)
+- Booking Service (NestJS)
+
+**Manual Deployment:**
+
+See `render.yaml` for detailed configuration.
+
+**Environment Variables on Render:**
+```bash
+# Database (auto-filled by Render)
+DB_HOST=<from-postgres-service>
+DB_PORT=5432
+DB_USER=<from-postgres-service>
+DB_PASSWORD=<from-postgres-service>
+DB_NAME=psikolog_db
+
+# Service URLs
+FASKES_SERVICE_URL=https://psikolog-faskes-service.onrender.com
+PORT=8003
+NODE_ENV=production
+```
+
+### Railway.com
+
+Railway deployment configuration available in `railway.json`.
+
+### Local Tunneling (Ngrok)
+
+For quick public access without deployment:
+
+```bash
+# Install ngrok
+brew install ngrok
+
+# Start tunnel
+ngrok http 8003
+```
+
 ### Production Considerations
 
 1. **Security**: Add JWT authentication to all endpoints
@@ -689,6 +764,10 @@ This project demonstrates:
 4. **Monitoring**: Add health checks and metrics
 5. **Testing**: Add unit tests and integration tests
 6. **API Documentation**: Generate full Swagger/OpenAPI docs
+7. **Environment**: Use production-ready PostgreSQL (Render managed)
+8. **CORS**: Configure allowed origins properly
+9. **Rate Limiting**: Add rate limiting for API endpoints
+10. **Backup**: Set up automated database backups
 
 ## ✅ Status
 

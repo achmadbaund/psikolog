@@ -49,6 +49,8 @@ services:
     container_name: booking-service
     ports:
       - "8003:8003"
+    env_file:
+      - .env
     environment:
       DB_HOST: postgres
       DB_PORT: 5432
