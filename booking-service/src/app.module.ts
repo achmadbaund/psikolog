@@ -3,8 +3,9 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { HttpModule } from '@nestjs/axios';
 import { BookingModule } from './booking/booking.module';
-import { PsychologistModule } from './psychologist/psychologist.module';
 import { HealthModule } from './health/health.module';
+import { KafkaModule } from './kafka/kafka.module';
+import { writeDbConfig, readDbConfig } from './config/database.config';
 
 @Module({
   imports: [
@@ -12,44 +13,38 @@ import { HealthModule } from './health/health.module';
       isGlobal: true,
     }),
     HttpModule,
+    // Default connection for legacy support
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
-        // Check if DATABASE_URL exists (Railway/Render format)
-        const databaseUrl = configService.get<string>('DATABASE_URL');
+        const useCQRS = configService.get<string>('CQRS_ENABLED') === 'true';
 
-        console.log('=== DATABASE CONFIG ===');
-        console.log('DATABASE_URL present:', !!databaseUrl);
+        if (useCQRS) {
+          // CQRS Mode: Use write connection as default for legacy entities
+          return writeDbConfig(configService);
+        }
+
+        // Legacy Mode: PostgreSQL config
+        const databaseUrl = configService.get<string>('DATABASE_URL');
+        const sslEnabled = configService.get<string>('NODE_ENV') === 'production';
 
         if (databaseUrl) {
-          // Parse DATABASE_URL format: postgres://user:pass@host:port/db
           const url = new URL(databaseUrl);
-          const sslEnabled = process.env.NODE_ENV === 'production';
-
-          const config = {
+          return {
             type: 'postgres' as const,
             host: url.hostname,
             port: parseInt(url.port) || 5432,
             username: url.username,
             password: url.password,
-            database: url.pathname.substring(1), // Remove leading slash
+            database: url.pathname.substring(1),
             entities: [__dirname + '/**/*.entity{.ts,.js}'],
             synchronize: true,
             ssl: sslEnabled ? { rejectUnauthorized: false } : false,
           };
-          console.log('Using DATABASE_URL');
-          console.log('Host:', config.host);
-          console.log('Database:', config.database);
-          console.log('SSL:', sslEnabled);
-          console.log('=====================');
-          return config;
         }
 
-        // Fallback to individual env vars (Docker/local format)
-        const sslEnabled = configService.get<string>('NODE_ENV') === 'production';
-
-        const config = {
+        return {
           type: 'postgres' as const,
           host: configService.get<string>('DB_HOST') || 'postgres',
           port: configService.get<number>('DB_PORT') || 5432,
@@ -60,17 +55,24 @@ import { HealthModule } from './health/health.module';
           synchronize: true,
           ssl: sslEnabled ? { rejectUnauthorized: false } : false,
         };
-        console.log('Using individual env vars');
-        console.log('Host:', config.host);
-        console.log('Database:', config.database);
-        console.log('SSL:', sslEnabled);
-        console.log('=====================');
-        return config;
       },
     }),
+    // Named connections for CQRS
+    TypeOrmModule.forRootAsync({
+      name: 'writeConnection',
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: writeDbConfig,
+    }),
+    TypeOrmModule.forRootAsync({
+      name: 'readConnection',
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: readDbConfig,
+    }),
     BookingModule,
-    PsychologistModule,
     HealthModule,
+    KafkaModule,
   ],
   controllers: [],
   providers: [],

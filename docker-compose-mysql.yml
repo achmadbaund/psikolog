@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  # ============================================
+  # CQRS MYSQL WRITE DATABASE
+  # ============================================
+  mysql-write:
+    image: mysql:8.0
+    container_name: booking-mysql-write
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: booking_write
+      MYSQL_USER: user
+      MYSQL_PASSWORD: userpassword
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-write-data:/var/lib/mysql
+    command: --default-authentication-plugin=mysql_native_password
+    networks:
+      - psikolog-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================
+  # CQRS MYSQL READ DATABASE
+  # ============================================
+  mysql-read:
+    image: mysql:8.0
+    container_name: booking-mysql-read
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: booking_read
+      MYSQL_USER: user
+      MYSQL_PASSWORD: userpassword
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql-read-data:/var/lib/mysql
+    command: --default-authentication-plugin=mysql_native_password
+    networks:
+      - psikolog-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================
+  # PHPMYADMIN (Database Management UI)
+  # ============================================
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: booking-phpmyadmin
+    links:
+      - mysql-write
+      - mysql-read
+    environment:
+      # Using PMA_HOSTS to access both databases
+      PMA_HOSTS: mysql-write,mysql-read
+      PMA_ARBITRARY: 1
+    ports:
+      - "80:80"
+    networks:
+      - psikolog-network
+    depends_on:
+      - mysql-write
+      - mysql-read
+
+volumes:
+  mysql-write-data:
+  mysql-read-data:
+
+networks:
+  psikolog-network:
+    external: true

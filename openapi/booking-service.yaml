@@ -1,0 +1,254 @@
+openapi: 3.0.3
+info:
+  title: Booking Service API
+  description: |
+    API layanan booking konsultasi psikologi dengan arsitektur CQRS + Kafka.
+    - **Read**: Query dari Read Database (MySQL:3307)
+    - **Write**: Command ke Write Database (MySQL:3306) + Event ke Kafka
+  version: 1.0.0
+  contact:
+    name: Psikolog Platform
+
+servers:
+  - url: http://localhost:8003
+    description: Lokal development
+  - url: http://localhost:8000
+    description: Via Kong Gateway (proxy port 8000)
+
+tags:
+  - name: Bookings
+    description: Manajemen booking konsultasi psikologi (CQRS)
+  - name: Health
+    description: Endpoint health check
+
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Health check
+      operationId: getHealth
+      responses:
+        '200':
+          description: Service sehat
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: healthy
+                  timestamp:
+                    type: string
+                    format: date-time
+                  service:
+                    type: string
+                    example: booking-service
+
+  /bookings:
+    get:
+      tags: [Bookings]
+      summary: List semua booking (CQRS Read)
+      operationId: findAllBookings
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: userId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: psychologistId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/BookingStatus'
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Daftar booking terpaginate dari Read DB
+
+    post:
+      tags: [Bookings]
+      summary: Buat booking baru (CQRS Write)
+      operationId: createBooking
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBookingRequest'
+      responses:
+        '201':
+          description: Booking berhasil dibuat
+        '400':
+          description: Validasi gagal
+
+  /bookings/{bookingId}:
+    parameters:
+      - name: bookingId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [Bookings]
+      summary: Detail booking (CQRS Read)
+      operationId: findOneBooking
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Detail booking dari Read DB
+        '404':
+          description: Booking tidak ditemukan
+
+    put:
+      tags: [Bookings]
+      summary: Update booking (CQRS Write)
+      operationId: updateBooking
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateBookingRequest'
+      responses:
+        '200':
+          description: Booking berhasil diupdate
+        '404':
+          description: Booking tidak ditemukan
+
+    delete:
+      tags: [Bookings]
+      summary: Batalkan booking (CQRS Write)
+      operationId: cancelBooking
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelBookingRequest'
+      responses:
+        '200':
+          description: Status booking diupdate ke CANCELLED
+        '404':
+          description: Booking tidak ditemukan
+
+  /bookings/{bookingId}/join:
+    post:
+      tags: [Bookings]
+      summary: Join sesi video konsultasi
+      operationId: joinSession
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: bookingId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: URL sesi video
+        '404':
+          description: Booking tidak ditemukan
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    BookingStatus:
+      type: string
+      enum:
+        - PENDING
+        - CONFIRMED
+        - IN_PROGRESS
+        - COMPLETED
+        - CANCELLED
+        - NO_SHOW
+
+    SessionType:
+      type: string
+      enum:
+        - VIDEO
+        - CHAT
+        - AUDIO
+
+    CreateBookingRequest:
+      type: object
+      required:
+        - psychologistId
+        - scheduledAt
+      properties:
+        psychologistId:
+          type: string
+          format: uuid
+          description: UUID psikolog
+        scheduledAt:
+          type: string
+          format: date-time
+          description: Waktu jadwal (ISO 8601)
+        durationMinutes:
+          type: integer
+          minimum: 30
+          maximum: 120
+          default: 60
+        sessionType:
+          $ref: '#/components/schemas/SessionType'
+        notes:
+          type: string
+          maxLength: 500
+
+    UpdateBookingRequest:
+      type: object
+      properties:
+        scheduledAt:
+          type: string
+          format: date-time
+        notes:
+          type: string
+          maxLength: 500
+
+    CancelBookingRequest:
+      type: object
+      properties:
+        cancellationReason:
+          type: string
+          maxLength: 500

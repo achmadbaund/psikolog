@@ -165,6 +165,10 @@ NODE_ENV=production
 | `FASKES_SERVICE_URL` | `https://faskes-service.railway.app` | Faskes service URL | ✅ Required |
 | `NODE_ENV` | `production` | Manual set | ✅ Required |
 | `PORT` | `8003` | Railway auto-set | ✅ Auto |
+| **Kafka Variables** | | | |
+| `KAFKA_BROKERS` | `<kafka-service>.railway.internal:9092` | Kafka Shared Variable | Optional (⚠️ Required untuk async) |
+| `KAFKA_TOPIC` | `booking-events` | Kafka Shared Variable | Optional (⚠️ Required untuk async) |
+| `KAFKA_GROUP_ID` | `booking-processor` | Manual set | Optional (⚠️ Required untuk async) |
 
 **⚡ CARA TERMUDAH:**
 Railway otomatis set `DATABASE_URL` ketika Anda connect PostgreSQL service ke booking service!
@@ -177,9 +181,12 @@ Railway otomatis set `DATABASE_URL` ketika Anda connect PostgreSQL service ke bo
 
 ### Faskes Service Variables:
 
-| Variable | Value | Source |
-|----------|-------|--------|
-| `PORT` | `8009` | Manual set |
+| Variable | Value | Source | Required |
+|----------|-------|--------|----------|
+| `PORT` | `8009` | Manual set | ✅ Required |
+| **Kafka Variables** | | | |
+| `KAFKA_BROKERS` | `<kafka-service>.railway.internal:9092` | Kafka Shared Variable | Optional (⚠️ Required untuk async) |
+| `KAFKA_TOPIC` | `booking-events` | Kafka Shared Variable | Optional (⚠️ Required untuk async) |
 
 ---
 
@@ -223,6 +230,155 @@ curl https://booking-service.railway.app/psychologists
 curl -X POST https://booking-service.railway.app/psychologists/ingest
 ```
 
+### Test Kafka Booking Flow (Jika Kafka deployed):
+```bash
+# Create booking via Faskes Service (Producer)
+curl -X POST https://faskes-service.railway.app/booking \
+  -H "Content-Type: application/json" \
+  -d '{
+    "faskes_id": "550e8400-e29b-41d4-a716-446655440001",
+    "dokter_id": "550e8400-e29b-41d4-a716-446655440101",
+    "pasien_id": "user-001",
+    "jadwal": "2026-03-15T10:00:00Z",
+    "session_type": "VIDEO",
+    "notes": "Konsultasi untuk kecemasan"
+  }'
+```
+
+**Expected Response:**
+```json
+{
+  "status": "success",
+  "message": "Booking request received and queued for processing",
+  "data": {
+    "booking_id": "abc-123-def-456",
+    "status": "PENDING",
+    "estimated_processing_time": "1-2 minutes"
+  }
+}
+```
+
+**Verify di Kafka UI:**
+1. Buka Kafka UI: `https://kafka-<service-id>.railway.app`
+2. Cek topic `booking-events`
+3. Pastikan message muncul
+
+**Verify Booking di Database:**
+```bash
+curl https://booking-service.railway.app/bookings
+```
+
+---
+
+## 📡 Langkah 5: Deploy Kafka (Optional - Untuk Async Processing)
+
+Railway sekarang support Kafka via template! Gunakan template ini untuk async booking flow.
+
+### Deploy Kafka dari Template:
+
+1. Buka: https://railway.com/deploy/kafka-wkafka-ui
+2. Klik **"Deploy Now"**
+3. Pilih project Railway Anda
+4. Railway akan deploy:
+   - ✅ Apache Kafka (KRaft mode - tanpa Zookeeper)
+   - ✅ Kafka UI untuk observability
+
+### Configure Kafka Shared Variables:
+
+Setelah Kafka deploy, Railway akan otomatis membuat environment variables:
+
+**Kafka Service Variables (Auto-generated):**
+```bash
+KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=<kafka-service>:9092
+KAFKA_CLUSTERS_0_NAME=Local
+KAFKA_CLUSTERS_0_PROPERTIES_SECURITY_PROTOCOL=PLAINTEXT
+SERVER_PORT=8080
+```
+
+**Create Shared Variables untuk Kafka:**
+
+**Step-by-Step:**
+
+1. **Buka Project Settings**
+   - Klik icon **Settings** ⚙️ di pojok kanan atas (project level)
+   - Pilih **"Variables"** tab
+
+2. **Create Shared Variables**
+   - Klik **"New Variable"**
+   - Tambahkan variables ini satu per satu:
+
+   ```bash
+   # Shared Variable 1
+   Name: KAFKA_BROKERS
+   Value: <kafka-service-name>.railway.internal:9092
+   # Contoh: kafka-abc123def.railway.internal:9092
+
+   # Shared Variable 2
+   Name: KAFKA_TOPIC
+   Value: booking-events
+
+   # Shared Variable 3
+   Name: KAFKA_GROUP_ID
+   Value: booking-processor
+   ```
+
+3. **Verify Shared Variables**
+   - Setelah dibuat, shared variables akan muncul di semua services
+   - Ada icon 🔗 di sebelah nama variable
+
+**Cara dapatkan Kafka service name:**
+1. Buka Kafka service di Railway
+2. Lihat URL: `https://kafka-1a2b3c.railway.app`
+3. Service name: `kafka-1a2b3c`
+4. Internal URL: `kafka-1a2b3c.railway.internal:9092`
+
+**Architecture dengan Shared Variables:**
+
+```
+Project Settings (Shared Variables)
+    ├── KAFKA_BROKERS ──┬──→ Faskes Service
+    ├── KAFKA_TOPIC     │
+    └── KAFKA_GROUP_ID └──→ Booking Service
+```
+
+**Benefits:**
+- ✅ Single source of truth
+- ✅ Update once, applies to all services
+- ✅ Tidak perlu copy-paste ke setiap service
+
+### Update Service Variables untuk Kafka:
+
+**Faskes Service Variables:**
+```bash
+PORT=8009
+KAFKA_BROKERS={{KAFKA_BROKERS}}  # Reference to shared variable
+KAFKA_TOPIC={{KAFKA_TOPIC}}
+```
+
+**Booking Service Variables:**
+```bash
+# Database
+DATABASE_URL=<reference PostgreSQL service>
+NODE_ENV=production
+
+# Kafka
+KAFKA_BROKERS={{KAFKA_BROKERS}}  # Reference to shared variable
+KAFKA_TOPIC={{KAFKA_TOPIC}}
+KAFKA_GROUP_ID={{KAFKA_GROUP_ID}}
+```
+
+### Architecture dengan Kafka:
+
+```
+User → Faskes Service (Producer) → Kafka → Booking Service (Consumer) → PostgreSQL
+```
+
+**Benefits:**
+- ✅ Async processing - Fast response ke user
+- ✅ Decoupled services - Faskes & Booking independent
+- ✅ Message persistence - Messages tetap ada meskipun service down
+- ✅ Scalable - Kafka handle message queuing
+
 ---
 
 ## 🔄 Alternative: Gunakan Render.com
@@ -239,6 +395,7 @@ Lihat [DEPLOYMENT.md](DEPLOYMENT.md) untuk panduan Render.com.
 
 ## ✅ Railway Deployment Checklist
 
+### Tanpa Kafka (Sync):
 - [ ] PostgreSQL service deployed
 - [ ] Faskes service deployed
 - [ ] Booking service deployed
@@ -246,6 +403,14 @@ Lihat [DEPLOYMENT.md](DEPLOYMENT.md) untuk panduan Render.com.
 - [ ] Health checks passing untuk semua services
 - [ ] Test psychologists endpoint
 - [ ] Test ingestion endpoint
+
+### Dengan Kafka (Async):
+- [ ] Kafka service deployed dari template
+- [ ] Kafka shared variables created (KAFKA_BROKERS, KAFKA_TOPIC)
+- [ ] Faskes service connected to Kafka (Producer)
+- [ ] Booking service connected to Kafka (Consumer)
+- [ ] Test booking flow via Kafka topic
+- [ ] Verify messages di Kafka UI
 
 ---
 
@@ -275,6 +440,58 @@ Lihat [DEPLOYMENT.md](DEPLOYMENT.md) untuk panduan Render.com.
    docker run -p 8003:8003 -e PORT=8003 test
    curl http://localhost:8003/health
    ```
+
+---
+
+## 🔧 Railway Kafka Configuration Details
+
+### Kafka Service di Railway:
+
+Railway Kafka template menggunakan **KRaft mode** (tanpa Zookeeper):
+- ✅ Single-broker Kafka
+- ✅ Kafka UI otomatis include
+- ✅ Private networking untuk internal communication
+
+### Internal vs External Kafka:
+
+**Untuk Docker Compose (Local):**
+```bash
+KAFKA_BROKERS=kafka:29092  # Docker network
+```
+
+**Untuk Railway (Production):**
+```bash
+# Format: <kafka-service-name>.railway.internal:9092
+KAFKA_BROKERS=kafka-1a2b3c.railway.internal:9092
+```
+
+**Cara dapatkan Kafka service name:**
+
+Option 1: Dari Kafka service URL
+```
+https://kafka-abc123def.railway.app
+         ^^^^^^^^^^^^^^
+         Service name = kafka-abc123def
+```
+
+Option 2: Dari Railway dashboard
+1. Buka Kafka service
+2. Klik "Settings" → "General"
+3. Lihat "Service Name"
+4. Internal URL: `<service-name>.railway.internal:9092`
+
+### Kafka UI Access:
+
+**URL Format:**
+```
+https://kafka-abc123def.railway.app
+```
+
+**What you can see:**
+- Topics: `booking-events`
+- Messages: Real-time booking events
+- Consumer groups: `booking-processor`
+- Brokers: 1 broker connected
 
 ---
 

@@ -1,0 +1,386 @@
+openapi: 3.0.3
+info:
+  title: Faskes Service API
+  description: |
+    API layanan fasilitas kesehatan (faskes) dan dokter.
+    Mengintegrasikan data dari BPJS, Allo Bank, dan sumber eksternal lainnya.
+    Mendukung booking via Kafka producer.
+  version: 1.0.0
+  contact:
+    name: Psikolog Platform
+
+servers:
+  - url: http://localhost:8009
+    description: Lokal development
+  - url: http://localhost:8000
+    description: Via Kong Gateway (proxy port 8000)
+
+tags:
+  - name: Health
+    description: Health check
+  - name: Faskes
+    description: Manajemen fasilitas kesehatan
+  - name: Dokter
+    description: Data dokter dan jadwal praktik
+  - name: Layanan
+    description: Layanan faskes
+  - name: Booking
+    description: Booking via Kafka (Producer)
+  - name: External
+    description: Sinkronisasi data eksternal
+
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Health check
+      operationId: getHealth
+      responses:
+        '200':
+          description: Service sehat
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: healthy
+                  service:
+                    type: string
+                    example: faskes-service
+                  timestamp:
+                    type: string
+                    format: date-time
+                  external_sources:
+                    type: object
+                    properties:
+                      bpjs:
+                        type: object
+                        properties:
+                          status:
+                            type: string
+                          last_sync:
+                            type: string
+                            format: date-time
+                      allo_bank:
+                        type: object
+
+  /faskes:
+    get:
+      tags: [Faskes]
+      summary: List semua faskes dengan pagination
+      operationId: listFaskes
+      parameters:
+        - name: jenis_faskes
+          in: query
+          schema:
+            $ref: '#/components/schemas/JenisFaskes'
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Cari berdasarkan nama atau alamat
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Daftar faskes terpaginate
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+
+  /faskes/nearby:
+    post:
+      tags: [Faskes]
+      summary: Cari faskes terdekat berdasarkan koordinat
+      operationId: findNearbyFaskes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NearbyFaskesRequest'
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Daftar faskes terdekat, diurutkan berdasarkan jarak
+        '400':
+          description: latitude dan longitude wajib
+
+  /faskes/{faskesId}:
+    get:
+      tags: [Faskes]
+      summary: Detail faskes beserta dokter
+      operationId: getFaskesDetail
+      parameters:
+        - name: faskesId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Detail faskes dan daftar dokter
+        '404':
+          description: Faskes tidak ditemukan
+
+  /faskes/{faskesId}/dokter:
+    get:
+      tags: [Dokter]
+      summary: List dokter di faskes tertentu
+      operationId: listDokterByFaskes
+      parameters:
+        - name: faskesId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: spesialisasi
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Daftar dokter terpaginate
+
+  /faskes/{faskesId}/layanan:
+    get:
+      tags: [Layanan]
+      summary: List layanan di faskes tertentu
+      operationId: listLayananByFaskes
+      parameters:
+        - name: faskesId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Daftar layanan terpaginate
+        '404':
+          description: Faskes tidak ditemukan
+
+  /dokter/{dokterId}/jadwal:
+    get:
+      tags: [Dokter]
+      summary: Jadwal praktik dokter
+      operationId: getJadwalDokter
+      parameters:
+        - name: dokterId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Data dokter dan jadwal praktik
+        '404':
+          description: Dokter tidak ditemukan
+
+  /booking:
+    post:
+      tags: [Booking]
+      summary: Buat booking (publish ke Kafka)
+      operationId: createBooking
+      description: Menerima request booking dan mempublish ke Kafka topic untuk diproses oleh booking-service
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBookingRequest'
+      responses:
+        '202':
+          description: Booking diterima dan antri untuk diproses
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      booking_id:
+                        type: string
+                        format: uuid
+                      faskes_name:
+                        type: string
+                      dokter_name:
+                        type: string
+                      jadwal:
+                        type: string
+                        format: date-time
+                      status:
+                        type: string
+                        example: PENDING
+                      estimated_processing_time:
+                        type: string
+        '400':
+          description: Validasi gagal / field wajib tidak lengkap
+        '404':
+          description: Faskes atau dokter tidak ditemukan
+        '500':
+          description: Error Kafka
+
+  /external/sync:
+    post:
+      tags: [External]
+      summary: Sinkronisasi data dari sumber eksternal (BPJS, Allo Bank)
+      operationId: syncExternalData
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                source:
+                  type: string
+                  default: BPJS
+                  enum:
+                    - BPJS
+                    - Allo Bank
+                force_full_sync:
+                  type: boolean
+                  default: false
+                since:
+                  type: string
+                  format: date-time
+      responses:
+        '200':
+          description: Sinkronisasi berhasil
+
+components:
+  schemas:
+    JenisFaskes:
+      type: string
+      enum:
+        - RUMAH_SAKIT
+        - PUSKESMAS
+        - KLINIK
+        - LABORATORIUM
+        - APOTEK
+
+    PaginatedResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items: {}
+        pagination:
+          type: object
+          properties:
+            page:
+              type: integer
+            size:
+              type: integer
+            totalElements:
+              type: integer
+            totalPages:
+              type: integer
+            hasNext:
+              type: boolean
+            hasPrevious:
+              type: boolean
+
+    NearbyFaskesRequest:
+      type: object
+      required:
+        - latitude
+        - longitude
+      properties:
+        latitude:
+          type: number
+          format: double
+          minimum: -90
+          maximum: 90
+        longitude:
+          type: number
+          format: double
+          minimum: -180
+          maximum: 180
+        radius:
+          type: integer
+          description: Radius dalam meter (default 5000)
+          default: 5000
+        jenis_faskes:
+          $ref: '#/components/schemas/JenisFaskes'
+
+    CreateBookingRequest:
+      type: object
+      required:
+        - faskes_id
+        - dokter_id
+        - pasien_id
+        - jadwal
+      properties:
+        faskes_id:
+          type: string
+          format: uuid
+        dokter_id:
+          type: string
+          format: uuid
+        pasien_id:
+          type: string
+          format: uuid
+        jadwal:
+          type: string
+          format: date-time
+          description: Format ISO 8601 (e.g. 2026-03-15T10:00:00Z)
+        session_type:
+          type: string
+          enum:
+            - VIDEO
+            - CHAT
+            - AUDIO
+          default: VIDEO
+        notes:
+          type: string
