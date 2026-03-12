@@ -137,6 +137,63 @@ services:
     networks:
       - psikolog-network
 
+  # Konga - Kong GUI Dashboard (with dedicated PostgreSQL 10)
+  konga-postgres:
+    image: postgres:10-alpine
+    container_name: konga-postgres
+    environment:
+      POSTGRES_USER: konga
+      POSTGRES_DB: konga_db
+      POSTGRES_PASSWORD: kongapass
+    ports:
+      - "5433:5432"
+    volumes:
+      - konga-postgres-data:/var/lib/postgresql/data
+    networks:
+      - psikolog-network
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "konga"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  konga:
+    image: pantsel/konga:latest
+    container_name: konga
+    environment:
+      NODE_ENV: production
+      DB_ADAPTER: postgres
+      DB_HOST: konga-postgres
+      DB_PORT: 5432
+      DB_USER: konga
+      DB_PASSWORD: kongapass
+      DB_DATABASE: konga_db
+      KONGA_HOOK_TIMEOUT: 120000
+    ports:
+      - "1337:1337"
+    depends_on:
+      - konga-postgres
+      - kong
+    networks:
+      - psikolog-network
+    restart: always
+
+  # ============================================
+  # SWAGGER GATEWAY (API Docs via Kong)
+  # ============================================
+  swagger-gateway:
+    build:
+      context: ./swagger-gateway
+      dockerfile: Dockerfile
+    image: psikolog-swagger-gateway:latest
+    container_name: swagger-gateway
+    ports:
+      - "8085:80"
+    volumes:
+      - ./openapi:/usr/share/nginx/html/specs:ro
+    networks:
+      - psikolog-network
+
   # ============================================
   # CQRS MYSQL DATABASES
   # ============================================
@@ -271,6 +328,8 @@ volumes:
   mysql-write-data:
   mysql-read-data:
   kong-data:
+  konga-data:
+  konga-postgres-data:
 
 networks:
   psikolog-network:

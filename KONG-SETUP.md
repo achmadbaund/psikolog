@@ -83,6 +83,18 @@ Kong Manager adalah web UI built-in yang tersedia di Kong 3.8 (Community Edition
   curl http://localhost:8009/health
   ```
 
+### Swagger Gateway (API Docs)
+- **Kong Service Name:** `swagger-gateway`
+- **Target:** http://swagger-gateway:80
+- **Route:** `/api/docs` (strip_path: true)
+- **Akses:** http://localhost:8000/api/docs/
+
+Daftarkan setelah Kong dan swagger-gateway jalan:
+```bash
+cd swagger-gateway && chmod +x register-kong.sh && ./register-kong.sh
+```
+Atau manual: lihat [swagger-gateway/README.md](swagger-gateway/README.md).
+
 ## 🔐 Common Kong Plugins (via Konga or Admin API)
 
 ### Enable CORS

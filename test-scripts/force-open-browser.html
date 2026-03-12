@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Force Circuit Breaker OPEN</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 30px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #f5576c;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .step {
+            background: #f8f9fa;
+            border-left: 4px solid #f5576c;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+
+        .step h3 {
+            color: #f5576c;
+            margin-bottom: 10px;
+        }
+
+        .step p {
+            color: #495057;
+            line-height: 1.6;
+        }
+
+        .step code {
+            background: #e9ecef;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin: 30px 0;
+        }
+
+        button {
+            flex: 1;
+            padding: 15px 30px;
+            font-size: 16px;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-force {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        .btn-force:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(245, 87, 108, 0.4);
+        }
+
+        .btn-recover {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-recover:hover {
+            background: #218838;
+        }
+
+        .status {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .status-item:last-child {
+            border-bottom: none;
+        }
+
+        .status-label {
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .status-value {
+            color: #f5576c;
+            font-weight: 600;
+        }
+
+        .status-value.CLOSED {
+            color: #28a745;
+        }
+
+        .status-value.OPEN {
+            color: #dc3545;
+        }
+
+        .status-value.HALF_OPEN {
+            color: #ffc107;
+        }
+
+        .log {
+            background: #212529;
+            color: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .log-line {
+            padding: 5px 0;
+            border-bottom: 1px solid #343a40;
+        }
+
+        .log-line.error {
+            color: #f8d7da;
+        }
+
+        .log-line.success {
+            color: #d4edda;
+        }
+
+        .log-line.warning {
+            color: #fff3cd;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .loading {
+            animation: pulse 1s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔥 Force Circuit Breaker OPEN</h1>
+        <p class="subtitle">Tool untuk memaksa circuit breaker ke state OPEN</p>
+
+        <div class="status">
+            <div class="status-item">
+                <span class="status-label">Current State:</span>
+                <span class="status-value" id="currentState">-</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Failure Count:</span>
+                <span class="status-value" id="failureCount">-</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Faskes Service:</span>
+                <span class="status-value" id="faskesStatus">-</span>
+            </div>
+        </div>
+
+        <div class="button-group">
+            <button class="btn-force" onclick="forceOpen()">🔥 Force OPEN</button>
+            <button class="btn-recover" onclick="recover()">✅ Recover to CLOSED</button>
+        </div>
+
+        <div class="log" id="log">
+            <div class="log-line">Ready to force circuit breaker OPEN...</div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8003';
+        const FASKES_ID = '550e8400-e29b-41d4-a716-446655440001';
+
+        function log(message, type = '') {
+            const logDiv = document.getElementById('log');
+            const line = document.createElement('div');
+            line.className = 'log-line ' + type;
+            line.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logDiv.appendChild(line);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        async function getStatus() {
+            try {
+                const response = await fetch(`${API_URL}/resilience/circuit-breaker/status`);
+                const data = await response.json();
+
+                document.getElementById('currentState').textContent = data.state;
+                document.getElementById('currentState').className = 'status-value ' + data.state;
+                document.getElementById('failureCount').textContent = data.failureCount;
+
+                return data;
+            } catch (error) {
+                log('Error getting status: ' + error.message, 'error');
+                return null;
+            }
+        }
+
+        async function checkFaskes() {
+            try {
+                const response = await fetch('http://localhost:8009/health', { signal: AbortSignal.timeout(2000) });
+                document.getElementById('faskesStatus').textContent = 'RUNNING ✅';
+                document.getElementById('faskesStatus').style.color = '#28a745';
+                return true;
+            } catch {
+                document.getElementById('faskesStatus').textContent = 'DOWN ❌';
+                document.getElementById('faskesStatus').style.color = '#dc3545';
+                return false;
+            }
+        }
+
+        async function sendRequest(num) {
+            const start = Date.now();
+
+            try {
+                const response = await fetch(`${API_URL}/resilience/circuit-breaker/test/${FASKES_ID}`, {
+                    signal: AbortSignal.timeout(5000)
+                });
+
+                const data = await response.json();
+                const end = Date.now();
+                const duration = end - start;
+
+                log(`Request ${num}: ${data.circuitState} (${duration}ms)`, data.circuitState === 'OPEN' ? 'success' : 'warning');
+
+                return data;
+            } catch (error) {
+                const end = Date.now();
+                const duration = end - start;
+                log(`Request ${num}: ERROR - ${error.message} (${duration}ms)`, 'error');
+                return null;
+            }
+        }
+
+        async function forceOpen() {
+            log('=== 🔥 FORCING CIRCUIT BREAKER OPEN ===', 'warning');
+            log('');
+
+            // Step 1: Check Faskes
+            log('Step 1: Checking Faskes service...');
+            const faskesUp = await checkFaskes();
+
+            if (faskesUp) {
+                log('⚠️  WARNING: Faskes is RUNNING! Need to stop it first.', 'warning');
+                log('Run: docker-compose -f docker-compose-kafka.yml stop faskes-service', 'warning');
+                log('');
+                log('Stopping anyway...', 'warning');
+                log('(Note: You need to manually stop Faskes in terminal)', 'error');
+                return;
+            }
+
+            log('✅ Faskes service is DOWN', 'success');
+            log('');
+
+            // Step 2: Reset circuit
+            log('Step 2: Resetting circuit breaker...');
+            try {
+                await fetch(`${API_URL}/resilience/circuit-breaker/reset`, { method: 'POST' });
+                log('✅ Circuit breaker reset', 'success');
+            } catch (error) {
+                log('❌ Error resetting: ' + error.message, 'error');
+                return;
+            }
+            log('');
+
+            // Step 3: Send 3 requests
+            log('Step 3: Sending 3 requests to trigger OPEN...');
+            let isOpen = false;
+
+            for (let i = 1; i <= 3; i++) {
+                const data = await sendRequest(i);
+
+                if (data && data.circuitState === 'OPEN') {
+                    isOpen = true;
+                    log('✅✅✅ Circuit breaker is now OPEN!', 'success');
+                    break;
+                }
+
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+
+            log('');
+
+            // Step 4: Verify
+            log('Step 4: Verifying circuit state...');
+            const status = await getStatus();
+
+            if (status && status.state === 'OPEN') {
+                log('✅ SUCCESS: Circuit breaker is OPEN', 'success');
+                log('');
+                log('Next request will FAIL FAST (< 100ms)', 'success');
+            } else {
+                log('❌ FAILED: Circuit breaker is ' + (status ? status.state : 'UNKNOWN'), 'error');
+            }
+
+            log('');
+            log('========================================', 'success');
+            log('Circuit Breaker is now OPEN! 🔥', 'success');
+            log('========================================', 'success');
+        }
+
+        async function recover() {
+            log('=== ✅ RECOVERING CIRCUIT BREAKER ===', 'success');
+            log('');
+
+            log('Step 1: Starting Faskes service...');
+            log('(Run this in terminal: docker-compose -f docker-compose-kafka.yml start faskes-service)', 'warning');
+            log('');
+
+            log('Step 2: Waiting for you to start Faskes...', 'warning');
+            log('Press "Recover" again after starting Faskes', 'warning');
+            log('');
+
+            // Check if Faskes is running
+            const faskesUp = await checkFaskes();
+
+            if (!faskesUp) {
+                log('❌ Faskes is still DOWN. Please start it first:', 'error');
+                log('   docker-compose -f docker-compose-kafka.yml start faskes-service', 'error');
+                log('');
+                log('Then click "Recover" again.', 'warning');
+                return;
+            }
+
+            log('✅ Faskes service is RUNNING', 'success');
+            log('');
+
+            log('Step 3: Waiting for cooldown (10 seconds)...');
+            log('⏳', 'warning');
+
+            for (let i = 10; i > 0; i--) {
+                log(`${i}...`);
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+
+            log('');
+            log('Step 4: Sending recovery requests...');
+
+            // Send 3 requests to recover
+            for (let i = 1; i <= 3; i++) {
+                const data = await sendRequest(i);
+
+                if (data && data.circuitState === 'CLOSED') {
+                    log('✅ Circuit breaker is now CLOSED!', 'success');
+                    break;
+                }
+
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+
+            log('');
+            log('========================================', 'success');
+            log('Circuit Breaker is now CLOSED! ✅', 'success');
+            log('========================================', 'success');
+        }
+
+        // Auto-refresh status every 2 seconds
+        setInterval(async () => {
+            await getStatus();
+            await checkFaskes();
+        }, 2000);
+
+        // Initial check
+        getStatus();
+        checkFaskes();
+    </script>
+</body>
+</html>

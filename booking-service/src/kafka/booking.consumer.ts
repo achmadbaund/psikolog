@@ -52,18 +52,45 @@ export class BookingConsumer implements OnModuleInit {
       this.logger.log(`Consumer Group: ${groupId}`);
       this.logger.log(`Topic: ${topic}`);
 
-      // Create Kafka client
+      // Create Kafka client with retry configuration
       this.kafka = new Kafka({
         clientId: 'booking-service',
         brokers: brokers.split(','),
+        connectionTimeout: 10000, // 10 seconds
+        requestTimeout: 30000, // 30 seconds
+        retry: {
+          initialRetryTime: 100,
+          retries: 10,
+        },
       });
 
       // Create consumer
       this.consumer = this.kafka.consumer({ groupId });
 
-      // Connect consumer
-      await this.consumer.connect();
-      this.logger.log('Kafka Consumer connected successfully');
+      // Connect consumer with retry mechanism
+      let connected = false;
+      let retryCount = 0;
+      const maxRetries = 5;
+      const retryDelay = 5000; // 5 seconds
+
+      while (!connected && retryCount < maxRetries) {
+        try {
+          this.logger.log(`Attempting to connect to Kafka (attempt ${retryCount + 1}/${maxRetries})...`);
+          await this.consumer.connect();
+          connected = true;
+          this.logger.log('Kafka Consumer connected successfully');
+        } catch (error) {
+          retryCount++;
+          this.logger.error(`Connection attempt ${retryCount} failed:`, error.message);
+
+          if (retryCount < maxRetries) {
+            this.logger.log(`Retrying in ${retryDelay / 1000} seconds...`);
+            await new Promise(resolve => setTimeout(resolve, retryDelay));
+          } else {
+            throw new Error(`Failed to connect to Kafka after ${maxRetries} attempts: ${error.message}`);
+          }
+        }
+      }
 
       // Subscribe to topic
       await this.consumer.subscribe({ topic, fromBeginning: false });

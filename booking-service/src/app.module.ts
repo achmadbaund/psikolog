@@ -6,6 +6,8 @@ import { BookingModule } from './booking/booking.module';
 import { HealthModule } from './health/health.module';
 import { KafkaModule } from './kafka/kafka.module';
 import { writeDbConfig, readDbConfig } from './config/database.config';
+import { FaskesClientService } from './faskes-client/faskes-client.service';
+import { ResilienceController } from './resilience/resilience.controller';
 
 @Module({
   imports: [
@@ -74,7 +76,7 @@ import { writeDbConfig, readDbConfig } from './config/database.config';
     HealthModule,
     KafkaModule,
   ],
-  controllers: [],
-  providers: [],
+  controllers: [ResilienceController],
+  providers: [FaskesClientService],
 })
 export class AppModule {}

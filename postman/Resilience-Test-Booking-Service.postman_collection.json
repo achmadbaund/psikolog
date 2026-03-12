@@ -1,0 +1,165 @@
+{
+  "info": {
+    "name": "Resilience Test - Booking Service",
+    "description": "Postman collection for testing Circuit Breaker, Retry, and Timeout patterns in Booking Service",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Baseline - Normal Operation",
+      "item": [
+        {
+          "name": "Get Circuit Breaker Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8003/resilience/circuit-breaker/status",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8003",
+              "path": ["resilience", "circuit-breaker", "status"]
+            },
+            "description": "Check current circuit breaker status and configuration"
+          }
+        },
+        {
+          "name": "Get Resilience Configuration",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8003/resilience/config",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8003",
+              "path": ["resilience", "config"]
+            },
+            "description": "Get complete resilience configuration"
+          }
+        },
+        {
+          "name": "Test Circuit Breaker - Normal",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8003/resilience/circuit-breaker/test/550e8400-e29b-41d4-a716-446655440001",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8003",
+              "path": ["resilience", "circuit-breaker", "test", "550e8400-e29b-41d4-a716-446655440001"]
+            },
+            "description": "Test circuit breaker with valid Faskes ID (should succeed when service is up)"
+          }
+        }
+      ],
+      "description": "Test baseline behavior when all services are healthy"
+    },
+    {
+      "name": "2. Stress Test - Circuit Breaker Transition",
+      "item": [
+        {
+          "name": "Stress Test - 20 Requests",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8003/resilience/circuit-breaker/test/550e8400-e29b-41d4-a716-446655440001",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8003",
+              "path": ["resilience", "circuit-breaker", "test", "550e8400-e29b-41d4-a716-446655440001"]
+            },
+            "description": "Run 20 iterations to observe circuit breaker transitions. Use Postman Runner with:\n- Iterations: 20\n- Delay: 500ms\n\nExpected behavior:\n1. First 3 requests: Normal (may fail if Faskes is down)\n2. After 3 failures: Circuit OPEN\n3. Requests 4-20: Fail fast (< 50ms)"
+          }
+        }
+      ],
+      "description": "Stress test to observe circuit breaker state transitions"
+    },
+    {
+      "name": "3. Recovery Test - HALF-OPEN to CLOSED",
+      "item": [
+        {
+          "name": "Wait 10s then Test Recovery",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8003/resilience/circuit-breaker/test/550e8400-e29b-41d4-a716-446655440001",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8003",
+              "path": ["resilience", "circuit-breaker", "test", "550e8400-e29b-41d4-a716-446655440001"]
+            },
+            "description": "After 10 seconds of circuit OPEN, send this request to test HALF-OPEN state.\n\nExpected:\n- If Faskes is UP: Circuit returns to CLOSED\n- If Faskes is DOWN: Circuit returns to OPEN"
+          }
+        }
+      ],
+      "description": "Test recovery mechanism after service restart"
+    },
+    {
+      "name": "4. Manual Reset",
+      "item": [
+        {
+          "name": "Reset Circuit Breaker",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8003/resilience/circuit-breaker/reset",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8003",
+              "path": ["resilience", "circuit-breaker", "reset"]
+            },
+            "description": "Manually reset circuit breaker for testing"
+          }
+        }
+      ],
+      "description": "Manual reset operations for testing"
+    },
+    {
+      "name": "5. Integration - Booking with Circuit Breaker",
+      "item": [
+        {
+          "name": "Create Booking (with Circuit Breaker)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"psychologistId\": \"550e8400-e29b-41d4-a716-446655440101\",\n  \"scheduledAt\": \"2026-03-27T10:00:00Z\",\n  \"notes\": \"Testing circuit breaker integration\",\n  \"sessionType\": \"VIDEO\",\n  \"durationMinutes\": 60\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8003/bookings",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8003",
+              "path": ["bookings"]
+            },
+            "description": "Create booking with circuit breaker protection on Faskes service calls"
+          }
+        }
+      ],
+      "description": "Integration tests with actual booking flow"
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8003",
+      "type": "string"
+    },
+    {
+      "key": "faskesId",
+      "value": "550e8400-e29b-41d4-a716-446655440001",
+      "type": "string"
+    }
+  ]
+}
